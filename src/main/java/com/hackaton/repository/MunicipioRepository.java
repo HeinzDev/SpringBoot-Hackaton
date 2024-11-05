@@ -7,8 +7,6 @@ import org.springframework.data.repository.CrudRepository;
 import com.hackaton.model.Municipio;
 
 public interface MunicipioRepository extends CrudRepository<Municipio, Long> {
-    //TODO metodos repository
-
     List<Municipio> findByCodigoMunicipio(Long codigoMunicipio);
     List<Municipio> findByNome(String nome);
     List<Municipio> findByCodigoUF(Long codigoUF);

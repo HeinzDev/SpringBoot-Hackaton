@@ -1,8 +1,9 @@
 package com.hackaton.control;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -10,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hackaton.model.UF;
@@ -36,42 +36,38 @@ public class UFController extends ControllerSupport {
     }
 
     @GetMapping("/uf")
-    public Object getUFByParams(@RequestParam(required = false) String nome,
-                                  @RequestParam(required = false) Integer status,
-                                  @RequestParam(required = false) Long codigoUF,
-                                  @RequestParam(required = false) String sigla) {
+    public ResponseEntity<Object> getUFByParams(@RequestParam(required = false) String nome,
+                                    @RequestParam(required = false) String status,
+                                    @RequestParam(required = false) String codigoUF,
+                                    @RequestParam(required = false) String sigla) {
+        if(codigoUF != null && !isNumeric(codigoUF)) return ResponseEntity.status(0).body(createErrorResponse("O valor inserido para codigoUF não é um número válido", 400));
+        if(status != null && !isNumeric(status)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para status não é um número válido", 400));
         
-        //TODO String to long convert
+        Long codigoUFNumber = codigoUF != null ? Long.parseLong(codigoUF): null;
+        Long statusNumber = status != null ? Long.parseLong(status): null;
 
-        // if (nome != null && status != null && codigoUF != null && sigla != null) {
-        //     return action.findByNomeAndStatusAndCodigoUFAndSigla(nome, status, codigoUF, sigla);
-        // }
-        // if(nome != null && status != null && codigoUF != null){
-        //     return action.findByNomeAndStatusAndCodigoUF(nome, status, codigoUF);
-        // }
-
-
-        if(nome != null && status != null) return action.findByNomeAndStatus(nome, status);
-        else if(nome != null && codigoUF != null) return action.findByNomeAndCodigoUF(nome, codigoUF);    
-        else if(status != null && codigoUF != null) return action.findByStatusAndCodigoUF(status, codigoUF);
-        
-        
-         if(nome != null){
-            List<UF> result = action.findByNome(nome);
-            return result.isEmpty() ? Collections.emptyList() : result.get(0);
-        } else if (status != null){
-            return action.findByStatus(status);
-        } else if(codigoUF != null) {
-            List<UF> result = action.findByCodigoUF(codigoUF);
-            return result.isEmpty() ? Collections.emptyList() : result.get(0);
-        } else if(sigla != null) {
-            List<UF> result = action.findBySigla(sigla);
-            return result.isEmpty() ? Collections.emptyList() : result.get(0);
-        } 
-        
-        else{
-            return Collections.emptyList();
+        if (statusNumber != null && nome == null && codigoUFNumber == null && sigla == null) {
+            return ResponseEntity.ok(action.findByStatus(statusNumber));
         }
+
+        List<UF> results = new ArrayList<>();
+        if (nome != null) results.addAll(action.findByNome(nome));
+        if (codigoUFNumber != null) results.addAll(action.findByCodigoUF(codigoUFNumber));
+        if (sigla != null) results.addAll(action.findBySigla(sigla));
+
+        //
+        results = results.stream()
+                    .filter(uf -> (nome == null || uf.getNome().equals(nome)) &&
+                                    (statusNumber == null || uf.getStatus().equals(statusNumber)) &&
+                                    (codigoUFNumber == null || uf.getCodigoUF().equals(codigoUFNumber)) &&
+                                    (sigla == null || uf.getSigla().equals(sigla)))
+                    .distinct()
+                    .collect(Collectors.toList());
+
+        if(!results.isEmpty()) {
+            return ResponseEntity.ok(results.get(0));
+        }
+        return ResponseEntity.ok(Collections.emptyList());
     }
 
     //POST
@@ -133,11 +129,16 @@ public class UFController extends ControllerSupport {
         return ResponseEntity.ok(allUFs);
     }
 
-    //TODO DELETE(OPCIONAL)
-    @DeleteMapping("/uf/{code}")
-    public void deleteUF(@PathVariable Long code){
-        action.deleteById(code);
+    @DeleteMapping ("/uf")
+    public ResponseEntity<Object> deleteUF(@RequestParam(required = false) String code){
+        if(code==null) return ResponseEntity.status(400).body(createErrorResponse("O campo code é obrigatório.", 400));
+        if(code!=null && !isNumeric(code)) return ResponseEntity.status(400).body(createErrorResponse("Insira um valor numérico", 400));
+        Long codeNumber =  Long.parseLong(code);
 
-        //apagar recursivamente
+        UF target = action.findByCodigoUF(codeNumber).get(0);
+
+        target.setStatus(2L);
+        action.save(target);
+        return ResponseEntity.ok(target);
     }
 }
