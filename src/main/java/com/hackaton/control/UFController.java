@@ -40,7 +40,7 @@ public class UFController extends ControllerSupport {
                                     @RequestParam(required = false) String status,
                                     @RequestParam(required = false) String codigoUF,
                                     @RequestParam(required = false) String sigla) {
-        if(codigoUF != null && !isNumeric(codigoUF)) return ResponseEntity.status(0).body(createErrorResponse("O valor inserido para codigoUF não é um número válido", 400));
+        if(codigoUF != null && !isNumeric(codigoUF)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para codigoUF não é um número válido", 400));
         if(status != null && !isNumeric(status)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para status não é um número válido", 400));
         
         Long codigoUFNumber = codigoUF != null ? Long.parseLong(codigoUF): null;

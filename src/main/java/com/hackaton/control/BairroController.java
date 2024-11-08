@@ -48,7 +48,7 @@ public class BairroController extends ControllerSupport{
         }
 
         if (codigoBairro != null && !isNumeric(codigoBairro)) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para código bairro não é um número válido.", 400));
-        if (codigoMunicipio != null && !isNumeric(codigoMunicipio)) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para código município não é um número válido.", 400));
+        if (codigoMunicipio != null && !isNumeric(codigoMunicipio)) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para codigoMunicipio não é um número válido.", 400));
         if (status != null && !isNumeric(status)) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para status não é um número válido.", 400));
                          
         Long codigoBairroNumber = codigoBairro !=null ? Long.parseLong(codigoBairro): null;
@@ -113,7 +113,7 @@ public class BairroController extends ControllerSupport{
         if (bairro.getStatus() == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo status é obrigatório", 400));
 
         List<Bairro> targetBairroList = action.findByCodigoBairro(bairro.getCodigoBairro());
-        if(targetBairroList.isEmpty()) return ResponseEntity.status(0).body(createErrorResponse("Não foi encontrado nenhum Bairro com esse código.", 400));
+        if(targetBairroList.isEmpty()) return ResponseEntity.status(400).body(createErrorResponse("Não foi encontrado nenhum Bairro com esse código.", 400));
 
         Bairro targetBairro = targetBairroList.get(0);
 
