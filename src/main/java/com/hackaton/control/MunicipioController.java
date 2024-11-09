@@ -108,7 +108,6 @@ public class MunicipioController extends ControllerSupport {
 
         Iterable<Municipio> allMunicipios = action.findAll();
         return ResponseEntity.ok(allMunicipios);
-        // Lista completa de todos os municipios Iterable<UF> allMunicipios = action.findAll(); return ResponseEntity.ok(allUFs);
     }
 
     @DeleteMapping ("/municipio")

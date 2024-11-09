@@ -1,6 +1,7 @@
 package com.hackaton.hackaton;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -27,7 +28,6 @@ import com.hackaton.repository.UFRepository;
 @SpringBootTest
 @AutoConfigureMockMvc
 public class UFControllerTest {
-    //TODO Levantar requisitos
     @Autowired
     private MockMvc mockMvc;
 
@@ -35,7 +35,6 @@ public class UFControllerTest {
     private ObjectMapper objectMapper;
 
 
-    //Repositorio "Falso"
     @MockBean
     private UFRepository ufRepository;
 
@@ -43,7 +42,6 @@ public class UFControllerTest {
 
     @BeforeEach
     void setUp() {
-        //criando o Mock
         uf = new UF();
         uf.setCodigoUF(1L);
         uf.setNome("São Paulo");
@@ -65,7 +63,7 @@ public class UFControllerTest {
     //             .andExpect(jsonPath("$[0].status").value(uf.getStatus()));
     // }
 
-    //Deve conseguir encontrar pelo parâmetro "codigoUF"
+    //Deve retornar um objeto isolado pelo parâmetro "codigoUF"
     @Test
     void testGetUFByParams() throws Exception {
         Mockito.when(ufRepository.findByCodigoUF(1L)).thenReturn(Collections.singletonList(uf));
@@ -88,7 +86,6 @@ public class UFControllerTest {
         uf.setNome("São Paulo");
         uf.setStatus(1L);
     
-        // Mock dos métodos de busca
         when(ufRepository.findByNome("São Paulo")).thenReturn(Collections.singletonList(uf));
         when(ufRepository.findByStatus(1L)).thenReturn(Collections.singletonList(uf));
         when(ufRepository.findByCodigoUF(1L)).thenReturn(Collections.singletonList(uf));
@@ -154,19 +151,19 @@ public class UFControllerTest {
     @Test
     public void testGetUFByParams_invalidCodigoUF() throws Exception {
         mockMvc.perform(get("/uf")
-                .param("codigoUF", "invalid") // Parâmetro não numérico
+                .param("codigoUF", "invalid")
                 .param("nome", "Sao Paulo"))
-                .andExpect(jsonPath("$.status", is(400))) // Espera o status 400
-                .andExpect(jsonPath("$.mensagem", is("O valor inserido para codigoUF não é um número válido"))); // Verifica a mensagem de erro
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.mensagem", is("O valor inserido para codigoUF não é um número válido.")));
     }
 
-@Test
+    @Test
     public void testGetUFByParams_invalidStatus() throws Exception {
         mockMvc.perform(get("/uf")
-                .param("status", "notANumber") // Parâmetro não numérico
+                .param("status", "notANumber")
                 .param("nome", "Sao Paulo"))
-                .andExpect(jsonPath("$.status", is(400))) // Espera o status 400
-                .andExpect(jsonPath("$.mensagem", is("O valor inserido para status não é um número válido"))); // Verifica a mensagem de erro
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.mensagem", is("O valor inserido para status não é um número válido.")));
     }
 
 
@@ -192,7 +189,77 @@ public class UFControllerTest {
                 .andExpect(jsonPath("$[0].status", is(1)));
     }
 
-    //Deve conseguir editar UF
+    // Deve retornar erro quando criar uma UF com parâmetros insuficientes
+    @Test
+    public void testPostUFByInvalidParams() throws Exception {
+        UF uf = new UF();
+        uf.setNome("São Paulo");
+        uf.setStatus(1L);
+    
+        mockMvc.perform(post("/uf")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(uf)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.mensagem", is("Campo sigla é obrigatório")));
+    }
+
+    //Deve retornar Erro ao repetir Nome
+    @Test
+    public void testPostUFByInvalidNome() throws Exception {
+        UF uf1 = new UF();
+        uf1.setCodigoUF(1L);
+        uf1.setSigla("SP");
+        uf1.setNome("São Paulo");
+        uf1.setStatus(1L);
+
+        when(ufRepository.findByNome(anyString())).thenReturn(Collections.emptyList());
+        when(ufRepository.findByNome("São Paulo")).thenReturn(Collections.singletonList(uf1));
+
+        UF uf2 = new UF();
+        uf2.setCodigoUF(2L);
+        uf2.setSigla("RJ");
+        uf2.setNome("São Paulo");
+        uf2.setStatus(1L);
+
+        mockMvc.perform(post("/uf")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(uf2)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.mensagem", is("Já existe uma UF com esse nome no banco de dados.")));
+    }
+
+    
+
+    //Deve retornar Erro ao repetir Sigla
+    @Test
+    public void testPostUFByInvalidSigla() throws Exception {
+        UF uf1 = new UF();
+        uf1.setCodigoUF(1L);
+        uf1.setSigla("SP");
+        uf1.setNome("São Paulo");
+        uf1.setStatus(1L);
+
+        // Simulando a existência de um UF com a mesma sigla
+        when(ufRepository.findByNome(anyString())).thenReturn(Collections.emptyList());
+        when(ufRepository.findBySigla("SP")).thenReturn(Collections.singletonList(uf1));
+
+        UF uf2 = new UF();
+        uf2.setCodigoUF(2L);
+        uf2.setSigla("SP");
+        uf2.setNome("Rio de Janeiro");
+        uf2.setStatus(1L);
+
+        mockMvc.perform(post("/uf")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(uf2)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.mensagem", is("Já existe uma UF com essa sigla no banco de dados.")));
+    }
+
+    //Deve conseguir editar UF e retornar um Array com todos os estados.
     @Test
     public void testEditUF() throws Exception {
         UF uf = new UF();
@@ -214,7 +281,6 @@ public class UFControllerTest {
                 .andExpect(jsonPath("$[0].nome", is("Rio de Janeiro")))
                 .andExpect(jsonPath("$[0].status", is(1)));
     }
-
 
     //Deve conseguir apagar UF
     @Test

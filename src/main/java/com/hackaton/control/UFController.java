@@ -40,8 +40,8 @@ public class UFController extends ControllerSupport {
                                     @RequestParam(required = false) String status,
                                     @RequestParam(required = false) String codigoUF,
                                     @RequestParam(required = false) String sigla) {
-        if(codigoUF != null && !isNumeric(codigoUF)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para codigoUF não é um número válido", 400));
-        if(status != null && !isNumeric(status)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para status não é um número válido", 400));
+        if(codigoUF != null && !isNumeric(codigoUF)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para codigoUF não é um número válido.", 400));
+        if(status != null && !isNumeric(status)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para status não é um número válido.", 400));
         
         Long codigoUFNumber = codigoUF != null ? Long.parseLong(codigoUF): null;
         Long statusNumber = status != null ? Long.parseLong(status): null;
@@ -83,8 +83,8 @@ public class UFController extends ControllerSupport {
         List<UF> nameExists = action.findByNome(uf.getNome());
         List<UF> siglaExists = action.findBySigla(uf.getSigla());
     
-        if (!nameExists.isEmpty()) return ResponseEntity.status(HttpStatus.CONFLICT).body(createErrorResponse("Já existe uma UF com esse nome no banco de dados.", 409));
-        if (!siglaExists.isEmpty()) return ResponseEntity.status(HttpStatus.CONFLICT).body(createErrorResponse("Já existe uma UF com essa sigla no banco de dados.", 409));
+        if (!nameExists.isEmpty()) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Já existe uma UF com esse nome no banco de dados.", 400));
+        if (!siglaExists.isEmpty()) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Já existe uma UF com essa sigla no banco de dados.", 400));
     
         action.save(uf);
         Iterable<UF> allUFs = action.findAll();
