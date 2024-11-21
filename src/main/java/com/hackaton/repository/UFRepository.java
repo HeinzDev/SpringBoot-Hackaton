@@ -11,4 +11,5 @@ public interface UFRepository extends CrudRepository<UF, Long> {
     List<UF> findByCodigoUF(long codigoUF);
     List<UF> findByNome(String nome);
     List<UF> findBySigla(String sigla);
+    void deleteByCodigoUF(long id);
 }

@@ -15,7 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.hackaton.model.Municipio;
 import com.hackaton.repository.MunicipioRepository;
 
+import jakarta.transaction.Transactional;
+
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,13 +30,13 @@ public class MunicipioController extends ControllerSupport {
     @Autowired
     private MunicipioRepository action;
     
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/municipio/all")
     public Iterable<Municipio> getAllMunicipios() {
         return action.findAll();
     }
     
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/municipio")
     public ResponseEntity<Object> getMunicipio(@RequestParam(required=false) String codigoMunicipio,
                                    @RequestParam(required=false) String codigoUF,
@@ -121,5 +124,20 @@ public class MunicipioController extends ControllerSupport {
         target.setStatus(2L);
         action.save(target);
         return ResponseEntity.ok(target);
+    }
+
+    @DeleteMapping ("/municipio/DELETE/{code}")
+    @Transactional
+    public ResponseEntity<Object> deletehiddenUF(@PathVariable Long code){
+        if(code==null) return ResponseEntity.status(400).body(createErrorResponse("O parametro code é obrigatório na URL", 400));
+
+        List<Municipio> targetList = action.findByCodigoMunicipio(code);
+
+        if (!targetList.isEmpty()) {
+            action.deleteByCodigoMunicipio(code);
+            return ResponseEntity.status(200).body(targetList.get(0));
+        } else{
+            return ResponseEntity.status(404).body(createErrorResponse("Not found", 404));
+        }
     }
 }

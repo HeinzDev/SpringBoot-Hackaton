@@ -12,4 +12,6 @@ public interface BairroRepository extends CrudRepository<Bairro, Long>{
     List<Bairro> findByCodigoMunicipio(Long codigoMunicipio);
     List<Bairro> findByNome(String nome);
     List<Bairro> findByStatus(Long status);
+
+    void deleteByCodigoBairro(long id);
 }

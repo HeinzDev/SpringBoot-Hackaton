@@ -19,6 +19,8 @@ import com.hackaton.model.Municipio;
 import com.hackaton.model.UF;
 import com.hackaton.repository.BairroRepository;
 
+import jakarta.transaction.Transactional;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -137,5 +139,20 @@ public class BairroController extends ControllerSupport{
         target.setStatus(2L);
         action.save(target);
         return ResponseEntity.ok(target);
+    }
+
+    @DeleteMapping ("/bairro/DELETE/{code}")
+    @Transactional
+    public ResponseEntity<Object> deletehiddenUF(@PathVariable Long code){
+        if(code==null) return ResponseEntity.status(400).body(createErrorResponse("O parametro code é obrigatório na URL", 400));
+
+        List<Bairro> targetList = action.findByCodigoBairro(code);
+
+        if (!targetList.isEmpty()) {
+            action.deleteByCodigoBairro(code);
+            return ResponseEntity.status(200).body(targetList.get(0));
+        } else{
+            return ResponseEntity.status(404).body(createErrorResponse("Not found", 404));
+        }
     }
 }

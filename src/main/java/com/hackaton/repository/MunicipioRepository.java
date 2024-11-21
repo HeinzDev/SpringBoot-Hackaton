@@ -11,4 +11,5 @@ public interface MunicipioRepository extends CrudRepository<Municipio, Long> {
     List<Municipio> findByNome(String nome);
     List<Municipio> findByCodigoUF(Long codigoUF);
     List<Municipio> findByStatus(Long status);
+    void deleteByCodigoMunicipio(long id);
 }
