@@ -107,13 +107,12 @@ public class UFController extends ControllerSupport {
         if (uf.getStatus() == 0) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo status é obrigatório", 400));
     
     
-        // Busca o UF existente pelo codigoUF
         List<UF> existingUFList = action.findByCodigoUF(uf.getCodigoUF());
         if (existingUFList.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(createErrorResponse("Não foi encontrado nenhuma UF com este código.", 404));
     
         UF existingUF = existingUFList.get(0);
     
-        // Verificações se já existem outra UF com o mesmo nome ou sigla
+        
         List<UF> nameExists = action.findByNome(uf.getNome());
         List<UF> siglaExists = action.findBySigla(uf.getSigla());
         if (!nameExists.isEmpty() && !nameExists.get(0).getCodigoUF().equals(existingUF.getCodigoUF())) {

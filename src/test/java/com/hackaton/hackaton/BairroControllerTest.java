@@ -270,7 +270,7 @@ public class BairroControllerTest {
                 .andExpect(jsonPath("$[0].status", is(2)));
     }
     
-    //TODO Deve retornar erro quando não informar algum dos parâmetros
+    //Deve retornar erro quando não informar algum dos parâmetros
     @Test
     public void testEditBairroInvalidParams() throws Exception {
         bairro.setCodigoMunicipio(1L);
