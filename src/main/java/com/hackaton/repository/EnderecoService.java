@@ -16,5 +16,9 @@ public class EnderecoService {
     public List<Endereco> findByPessoaId(Long pessoaId) {
         return enderecoRepository.findByCodigoPessoa(pessoaId);
     }
+
+    public Endereco save(Endereco endereco) {
+        return enderecoRepository.save(endereco);
+    }
 }
 

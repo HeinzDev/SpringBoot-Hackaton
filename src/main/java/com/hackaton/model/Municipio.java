@@ -1,5 +1,7 @@
 package com.hackaton.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -24,5 +26,6 @@ public class Municipio {
 
     @ManyToOne
     @JoinColumn(name = "codigoUF", referencedColumnName = "codigoUF", insertable = false, updatable = false)
+    @JsonIgnore
     private UF uf;
 }

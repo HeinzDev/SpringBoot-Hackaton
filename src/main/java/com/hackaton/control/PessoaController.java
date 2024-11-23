@@ -44,8 +44,12 @@ public class PessoaController extends ControllerSupport {
 
     @Autowired
     private EnderecoService enderecoService;
+    @Autowired
     private BairroService bairroService;
+    @Autowired
     private UFService ufService;
+
+    @Autowired
     private MunicipioService municipioService;
 
 
@@ -85,7 +89,6 @@ public class PessoaController extends ControllerSupport {
             Pessoa pessoa = results.get(0);
             List<Endereco> enderecos = enderecoService.findByPessoaId(pessoa.getCodigoPessoa());
     
-            // Preenchendo os endereços com informações adicionais de Bairro, Município e UF
             List<Map<String, Object>> enderecosCompleto = enderecos.stream().map(endereco -> {
                 Map<String, Object> enderecoMap = new HashMap<>();
                 enderecoMap.put("codigoEndereco", endereco.getCodigoEndereco());
@@ -95,30 +98,27 @@ public class PessoaController extends ControllerSupport {
                 enderecoMap.put("complemento", endereco.getComplemento());
                 enderecoMap.put("cep", endereco.getCep());
             
-                // Buscar o Bairro manualmente
                 Bairro bairro = bairroService.findBairroByCodigo(endereco.getCodigoBairro());
                 Map<String, Object> bairroMap = new HashMap<>();
                 bairroMap.put("codigoBairro", bairro.getCodigoBairro());
                 bairroMap.put("codigoMunicipio", bairro.getCodigoMunicipio());
                 bairroMap.put("nome", bairro.getNome());
             
-                // Buscar o Município manualmente
                 Municipio municipio = municipioService.findMunicipioByCodigo(bairro.getCodigoMunicipio());
                 Map<String, Object> municipioMap = new HashMap<>();
                 municipioMap.put("codigoMunicipio", municipio.getCodigoMunicipio());
                 municipioMap.put("codigoUF", municipio.getCodigoUF());
                 municipioMap.put("nome", municipio.getNome());
             
-                // Buscar o UF manualmente
                 UF uf = ufService.findUFByCodigo(municipio.getCodigoUF());
                 Map<String, Object> ufMap = new HashMap<>();
                 ufMap.put("codigoUF", uf.getCodigoUF());
                 ufMap.put("sigla", uf.getSigla());
                 ufMap.put("nome", uf.getNome());
             
-                municipioMap.put("uf", ufMap); // Associando a UF ao município
-                bairroMap.put("municipio", municipioMap); // Associando o município ao bairro
-                enderecoMap.put("bairro", bairroMap); // Associando o bairro ao endereço
+                municipioMap.put("uf", ufMap);
+                bairroMap.put("municipio", municipioMap);
+                enderecoMap.put("bairro", bairroMap); 
             
                 return enderecoMap;
             }).collect(Collectors.toList());
@@ -138,30 +138,52 @@ public class PessoaController extends ControllerSupport {
     
         return ResponseEntity.ok(Collections.emptyList());
     }
-    
 
     @PostMapping("/pessoa")
     public ResponseEntity<Object> createPessoa(@RequestBody Pessoa pessoa) {
-        if (pessoa.getNome() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo nome é obrigatório.", 400));
+        try {
+            if (pessoa.getNome() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo nome é obrigatório.", 400));
+            }
+            if (pessoa.getLogin() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo login é obrigatório.", 400));
+            }
+            if (pessoa.getStatus() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo status é obrigatório.", 400));
+            }
+    
+            pessoa.setCodigoPessoa(null);  // Deixe o Hibernate gerar o código automaticamente
+    
+            List<Pessoa> loginExists = action.findByLogin(pessoa.getLogin());
+            if (!loginExists.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Já existe uma pessoa com esse login no banco de dados.", 400));
+            }
+    
+            action.save(pessoa);
+            action.flush();  // Garante que a pessoa seja salva imediatamente
+    
+            if (pessoa.getEnderecos() != null) {
+                for (Endereco endereco : pessoa.getEnderecos()) {
+                    // Buscando o bairro baseado no código
+                    Bairro bairro = bairroService.findBairroByCodigo(endereco.getCodigoBairro());
+                    if (bairro == null) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Bairro não encontrado para o código " + endereco.getCodigoBairro(), 400));
+                    }
+                    
+                    endereco.setBairro(bairro);
+    
+                    endereco.setPessoa(pessoa); 
+    
+                    enderecoService.save(endereco);
+                }
+            }
+    
+            return ResponseEntity.ok(pessoa);
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("Erro interno no servidor: " + ex.getMessage(), 500));
         }
-        if (pessoa.getLogin() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo login é obrigatório.", 400));
-        }
-        if (pessoa.getStatus() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo status é obrigatório.", 400));
-        }
-
-        List<Pessoa> loginExists = action.findByLogin(pessoa.getLogin());
-        if (!loginExists.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Já existe uma pessoa com esse login no banco de dados.", 400));
-        }
-
-        action.save(pessoa);
-        Iterable<Pessoa> allPessoas = action.findAll();
-        return ResponseEntity.ok(allPessoas);
     }
-
+    
     @PutMapping("/pessoa")
     public ResponseEntity<Object> editPessoa(@RequestBody Pessoa pessoa) {
         if (pessoa.getCodigoPessoa() == null) {
