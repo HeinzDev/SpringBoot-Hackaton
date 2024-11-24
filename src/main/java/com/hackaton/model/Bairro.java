@@ -11,7 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -35,7 +34,6 @@ public class Bairro {
     @JsonIgnore
     private Municipio municipio;
 
-    // Relação com Endereco (comentada, mas é importante se for necessária)
     @OneToMany(mappedBy = "bairro")
     @JsonIgnore
     private List<Endereco> enderecos;
