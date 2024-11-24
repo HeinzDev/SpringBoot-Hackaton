@@ -3,6 +3,7 @@ package com.hackaton.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,6 @@ public class PessoaController extends ControllerSupport {
     @Autowired
     private MunicipioService municipioService;
 
-
     @CrossOrigin(origins = "*")
     @GetMapping("/all")
     public Iterable<Pessoa> getPessoas() {
@@ -66,27 +66,43 @@ public class PessoaController extends ControllerSupport {
                                                     @RequestParam(required = false) String status,
                                                     @RequestParam(required = false) String login) {
         if (codigoPessoa != null && !isNumeric(codigoPessoa)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para códigoPessoa não é um número válido.", 400));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para códigoPessoa não é um número válido.", 400));
         }
         if (status != null && !isNumeric(status)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para status não é um número válido.", 400));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para status não é um número válido.", 400));
         }
 
-
-        //Fazer dois hashmaps (Pessoa/Endereço) com join
         Long codigoPessoaNumber = codigoPessoa != null ? Long.parseLong(codigoPessoa) : null;
         Long statusNumber = status != null ? Long.parseLong(status) : null;
+
+        if (statusNumber != null && codigoPessoa == null && login == null) {
+            List<Pessoa> pessoasComStatus = action.findByStatus(statusNumber);
+            List<Map<String, Object>> pessoasSemEnderecos = pessoasComStatus.stream().map(pessoa -> {
+                Map<String, Object> pessoaMap = new HashMap<>();
+                pessoaMap.put("codigoPessoa", pessoa.getCodigoPessoa());
+                pessoaMap.put("nome", pessoa.getNome());
+                pessoaMap.put("sobrenome", pessoa.getSobrenome());
+                pessoaMap.put("idade", pessoa.getIdade());
+                pessoaMap.put("login", pessoa.getLogin());
+                pessoaMap.put("senha", pessoa.getSenha());
+                pessoaMap.put("status", pessoa.getStatus());
+                pessoaMap.put("endereco", Collections.emptyList());
+                return pessoaMap;
+            }).collect(Collectors.toList());
+            return ResponseEntity.ok(pessoasSemEnderecos);
+        }
 
         List<Pessoa> results = new ArrayList<>();
         if (codigoPessoaNumber != null) results.addAll(action.findByCodigoPessoa(codigoPessoaNumber));
         if (login != null) results.addAll(action.findByLogin(login));
+        if (statusNumber != null) results.addAll(action.findByStatus(statusNumber));
 
         results = results.stream()
-                .filter(pessoa -> (statusNumber == null || pessoa.getStatus().equals(statusNumber)) &&
-                        (codigoPessoaNumber == null || pessoa.getCodigoPessoa().equals(codigoPessoaNumber)) &&
-                        (login == null || pessoa.getLogin().equals(login)))
-                .distinct()
-                .collect(Collectors.toList());
+        .filter(pessoa -> (statusNumber == null || pessoa.getStatus().equals(statusNumber)) &&
+        (codigoPessoaNumber == null || pessoa.getCodigoPessoa().equals(codigoPessoaNumber)) &&
+        (login == null || pessoa.getLogin().equals(login)))
+        .distinct()
+        .collect(Collectors.toList());
 
         if (!results.isEmpty()) {
             Pessoa pessoa = results.get(0);
@@ -143,7 +159,7 @@ public class PessoaController extends ControllerSupport {
             pessoaMap.put("status", pessoa.getStatus());
             pessoaMap.put("enderecos", enderecosCompleto);
 
-            return ResponseEntity.ok(Collections.singletonList(pessoaMap));
+            return ResponseEntity.ok(pessoaMap);
         }
 
         return ResponseEntity.ok(Collections.emptyList());
@@ -151,6 +167,7 @@ public class PessoaController extends ControllerSupport {
 
     @PostMapping("/pessoa")
     public ResponseEntity<Object> createPessoa(@RequestBody Pessoa pessoa) {
+        //Sem o trycatch não consigo prever todos os erros possíveis devido a muitos campos :/
         try {
             if (pessoa.getNome() == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo nome é obrigatório.", 400));
             if (pessoa.getLogin() == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo login é obrigatório.", 400));
@@ -183,8 +200,8 @@ public class PessoaController extends ControllerSupport {
                 }
             }
             return ResponseEntity.ok(pessoa);
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("Erro interno no servidor: " + ex.getMessage(), 500));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("Erro interno no servidor: " + e.getMessage(), 500));
         }
     }
 
@@ -216,7 +233,46 @@ public class PessoaController extends ControllerSupport {
         targetPessoa.setStatus(pessoa.getStatus());
         action.save(targetPessoa);
 
+        // Endereços existentes antes da atualização
+        List<Endereco> enderecosExistentes = enderecoService.findByPessoaId(targetPessoa.getCodigoPessoa());
+
+        // Lista para armazenar os endereços que foram atualizados ou criados
+        List<Endereco> listaAtualizarEnderecos = new ArrayList<>();
+
+        if (pessoa.getEnderecos() != null) {
+            for (Endereco endereco : pessoa.getEnderecos()) {
+                if (endereco.getCodigoEndereco() == null) {
+                    // Criar novo endereço
+                    endereco.setPessoa(targetPessoa);
+                    Endereco savedEndereco = enderecoService.save(endereco);
+                    listaAtualizarEnderecos.add(savedEndereco);
+                } else {
+                    // Se o Passou código endereço deve procurar Endereços, se existir edita, se não existir Cria um.
+                    Endereco existingEndereco = enderecoService.findById(endereco.getCodigoEndereco());
+                    if (existingEndereco != null && existingEndereco.getPessoa().getCodigoPessoa().equals(targetPessoa.getCodigoPessoa())) {
+                        existingEndereco.setNomeRua(endereco.getNomeRua());
+                        existingEndereco.setNumero(endereco.getNumero());
+                        existingEndereco.setComplemento(endereco.getComplemento());
+                        existingEndereco.setCep(endereco.getCep());
+                        existingEndereco.setCodigoBairro(endereco.getCodigoBairro());
+                        Endereco savedEndereco = enderecoService.save(existingEndereco);
+                        listaAtualizarEnderecos.add(savedEndereco);
+                    }
+                }
+            }
+        }
+
+        // Apagar endereços não encontrados na lista de atualização
+        for (Endereco existingEndereco : enderecosExistentes) {
+            if (listaAtualizarEnderecos.stream().noneMatch(e -> e.getCodigoEndereco().equals(existingEndereco.getCodigoEndereco()))) {
+                enderecoService.delete(existingEndereco);
+            }
+        }
+
+        // Retorna todas as pessoas com os endereços atualizados
         Iterable<Pessoa> allPessoas = action.findAll();
+        allPessoas.forEach(p -> p.setEnderecos(Collections.emptyList()));  // Adiciona uma lista vazia de endereços
+
         return ResponseEntity.ok(allPessoas);
     }
 

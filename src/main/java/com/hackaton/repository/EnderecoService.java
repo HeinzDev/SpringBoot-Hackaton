@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.hackaton.model.Endereco;
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class EnderecoService {
@@ -19,6 +20,13 @@ public class EnderecoService {
 
     public Endereco save(Endereco endereco) {
         return enderecoRepository.save(endereco);
+    }
+
+    public Endereco findById(Long id) {
+        return enderecoRepository.findById(id).orElseThrow(()->new EntityNotFoundException("endereço não encontrado"));
+    }
+    public void delete(Endereco endereco) {
+        enderecoRepository.deleteById(endereco.getCodigoEndereco());
     }
 }
 
