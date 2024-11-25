@@ -55,15 +55,18 @@ public class PessoaController extends ControllerSupport {
     private MunicipioService municipioService;
 
     @CrossOrigin(origins = "*")
-    @GetMapping("/all")
-    public Iterable<Pessoa> getPessoas() {
-        return action.findAll();
+    @GetMapping("/pessoa/all")
+    public ResponseEntity<Object> getPessoas() {
+        List<Pessoa> results = action.findAll();
+        results.forEach(p-> p.setEnderecos(Collections.emptyList()));
+        return ResponseEntity.ok(results);
     }
 
     @CrossOrigin(origins = "*")
     @GetMapping("/pessoa")
     public ResponseEntity<Object> getPessoaByParams(@RequestParam(required = false) String codigoPessoa,
                                                     @RequestParam(required = false) String status,
+                                                    @RequestParam(required = false) String nome,
                                                     @RequestParam(required = false) String login) {
         if (codigoPessoa != null && !isNumeric(codigoPessoa)) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para códigoPessoa não é um número válido.", 400));
@@ -75,6 +78,7 @@ public class PessoaController extends ControllerSupport {
         Long codigoPessoaNumber = codigoPessoa != null ? Long.parseLong(codigoPessoa) : null;
         Long statusNumber = status != null ? Long.parseLong(status) : null;
 
+        //Pegar por status manualmente
         if (statusNumber != null && codigoPessoa == null && login == null) {
             List<Pessoa> pessoasComStatus = action.findByStatus(statusNumber);
             List<Map<String, Object>> pessoasSemEnderecos = pessoasComStatus.stream().map(pessoa -> {
@@ -94,15 +98,17 @@ public class PessoaController extends ControllerSupport {
 
         List<Pessoa> results = new ArrayList<>();
         if (codigoPessoaNumber != null) results.addAll(action.findByCodigoPessoa(codigoPessoaNumber));
+        if (nome != null) results.addAll(action.findByNome(nome));
         if (login != null) results.addAll(action.findByLogin(login));
         if (statusNumber != null) results.addAll(action.findByStatus(statusNumber));
 
         results = results.stream()
-        .filter(pessoa -> (statusNumber == null || pessoa.getStatus().equals(statusNumber)) &&
-        (codigoPessoaNumber == null || pessoa.getCodigoPessoa().equals(codigoPessoaNumber)) &&
-        (login == null || pessoa.getLogin().equals(login)))
-        .distinct()
-        .collect(Collectors.toList());
+                .filter(pessoa -> (statusNumber == null || pessoa.getStatus().equals(statusNumber)) &&
+                                    (codigoPessoaNumber == null || pessoa.getCodigoPessoa().equals(codigoPessoaNumber)) &&
+                                    (nome == null || pessoa.getNome().equals(nome)) &&
+                                    (login == null || pessoa.getLogin().equals(login)))
+                                    .distinct()
+                                    .collect(Collectors.toList());
 
         if (!results.isEmpty()) {
             Pessoa pessoa = results.get(0);
