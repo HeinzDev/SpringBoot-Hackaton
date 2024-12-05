@@ -123,9 +123,9 @@ public class MunicipioControllerTest {
                 .param("status", "1")
                 .param("codigoMunicipio", "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nome", is("São Paulo")))
-                .andExpect(jsonPath("$.status", is(1)))
-                .andExpect(jsonPath("$.codigoMunicipio", is(1)));
+                .andExpect(jsonPath("$[0].nome", is("São Paulo")))
+                .andExpect(jsonPath("$[0].status", is(1)))
+                .andExpect(jsonPath("$[0].codigoMunicipio", is(1)));
     }
     
     //Deve retornar um array com vários objetos ao fazer uma requisição STATUS

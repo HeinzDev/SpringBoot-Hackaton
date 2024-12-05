@@ -47,17 +47,8 @@ public class Endereco {
     @JsonBackReference
     private Pessoa pessoa;
 
-    //REMOVI POR QUE TA DANDO PROBLEMA
     @ManyToOne(fetch = FetchType.LAZY)  // Carregar Bairro junto com o Endereco
     @JoinColumn(name = "CODIGO_BAIRRO", insertable=false, updatable=false)
     private Bairro bairro;
     
 }
-    //         "codigoEndereco": 41,
-    //         "codigoPessoa": 15,
-    //         "codigoBairro": 4,
-    //         "nomeRua": "ADICIONADO",
-    //         "numero": "456",
-    //         "complemento": "COMPLEMENTO 1",
-    //         "cep": "33333-680",
-

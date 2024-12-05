@@ -89,7 +89,7 @@ public class BairroController extends ControllerSupport{
                         .distinct()
                         .collect(Collectors.toList());
 
-        if(!results.isEmpty()) return ResponseEntity.ok(results.get(0));
+        if(!results.isEmpty()) return ResponseEntity.ok(results);
         
         return ResponseEntity.ok(Collections.emptyList());
     }

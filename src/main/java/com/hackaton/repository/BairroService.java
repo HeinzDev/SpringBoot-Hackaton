@@ -5,14 +5,12 @@ import org.springframework.stereotype.Service;
 
 import com.hackaton.model.Bairro;
 
-import jakarta.persistence.EntityNotFoundException;
-
 @Service
 public class BairroService {
     @Autowired
     private BairroRepository bairroRepository;
 
     public Bairro findBairroByCodigo(Long codigoBairro) {
-        return bairroRepository.findById(codigoBairro).orElseThrow(() -> new EntityNotFoundException("Bairro não encontrado"));
-    }
+        return bairroRepository.findByCodigoBairro(codigoBairro).stream().findFirst().orElse(null);
+    }    
 }

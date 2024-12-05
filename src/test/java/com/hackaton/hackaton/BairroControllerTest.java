@@ -35,7 +35,6 @@ public class BairroControllerTest {
     private ObjectMapper objectMapper;
 
 
-    //Repositorio "Falso"
     @MockBean
     private BairroRepository bairroRepository;
 
@@ -43,14 +42,14 @@ public class BairroControllerTest {
 
     @BeforeEach
     void setUp() {
-        //criando o Mock
+
         bairro = new Bairro();
         bairro.setCodigoMunicipio(1L);
         bairro.setNome("Liberdade");
         bairro.setStatus(1L);
     }
 
-    //Deve retornar todas os Bairros
+    //Deve retornar todos os Bairros
     @Test
     void testGetAllBairros() throws Exception {
         Mockito.when(bairroRepository.findAll()).thenReturn(Collections.singletonList(bairro));
@@ -166,12 +165,11 @@ public class BairroControllerTest {
         mockMvc.perform(get("/bairro")
                 .param("nome", "Liberdade")
                 .param("status", "1")
-                .param("codigoBairro", "1")
-                .param("sigla", "SP"))
+                .param("codigoBairro", "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.codigoMunicipio", is(1)))
-                .andExpect(jsonPath("$.nome", is("Liberdade")))
-                .andExpect(jsonPath("$.status", is(1)));
+                .andExpect(jsonPath("$[0].codigoMunicipio", is(1)))
+                .andExpect(jsonPath("$[0].nome", is("Liberdade")))
+                .andExpect(jsonPath("$[0].status", is(1)));
     }
     
 

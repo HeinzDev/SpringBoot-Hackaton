@@ -75,10 +75,16 @@ public class PessoaController extends ControllerSupport {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O valor inserido para status não é um número válido.", 400));
         }
 
+        if(codigoPessoa==null&&status==null&&nome==null&&login==null){
+            List<Pessoa> targetList = action.findAll();
+            targetList.forEach(n -> n.getEnderecos().clear());
+            return ResponseEntity.ok(targetList);
+        }
+
         Long codigoPessoaNumber = codigoPessoa != null ? Long.parseLong(codigoPessoa) : null;
         Long statusNumber = status != null ? Long.parseLong(status) : null;
 
-        //Pegar por status manualmente
+        //Pegar por status manualmente e limpando campo Endereços (Array de Hashmaps com os dados)
         if (statusNumber != null && codigoPessoa == null && login == null) {
             List<Pessoa> pessoasComStatus = action.findByStatus(statusNumber);
             List<Map<String, Object>> pessoasSemEnderecos = pessoasComStatus.stream().map(pessoa -> {
@@ -172,45 +178,51 @@ public class PessoaController extends ControllerSupport {
     }
 
     @PostMapping("/pessoa")
+    @Transactional
     public ResponseEntity<Object> createPessoa(@RequestBody Pessoa pessoa) {
-        //Sem o trycatch não consigo prever todos os erros possíveis devido a muitos campos :/
         try {
             if (pessoa.getNome() == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo nome é obrigatório.", 400));
             if (pessoa.getLogin() == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo login é obrigatório.", 400));
             if (pessoa.getStatus() == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo status é obrigatório.", 400));
-
-            pessoa.setCodigoPessoa(null);
-
+    
+            // Verifica se o login já existe
             List<Pessoa> loginExists = action.findByLogin(pessoa.getLogin());
             if (!loginExists.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Já existe uma pessoa com esse login no banco de dados.", 400));
             }
-
-            action.save(pessoa);
-            action.flush(); 
-
+    
             if (pessoa.getEnderecos() != null) {
                 for (Endereco endereco : pessoa.getEnderecos()) {
-                    if (endereco.getCodigoPessoa() == null) {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("O campo codigoPessoa é obrigatório nos endereços.", 400));
+                    if (endereco.getCodigoEndereco() != null && endereco.getCodigoEndereco() != 0) { //sem o != ja deu problema antes
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Não é permitido passar o código de endereço ao criar um novo endereço.", 400));
                     }
-
+    
                     Bairro bairro = bairroService.findBairroByCodigo(endereco.getCodigoBairro());
                     if (bairro == null) {
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Bairro não encontrado para o código " + endereco.getCodigoBairro(), 400));
                     }
-
+    
                     endereco.setBairro(bairro);
                     endereco.setPessoa(pessoa);
+                }
+            }
+    
+            action.save(pessoa); // < Código Pessoa GERADO AQUI
+    
+            if (pessoa.getEnderecos() != null) {
+                for (Endereco endereco : pessoa.getEnderecos()) {
+                    endereco.setCodigoPessoa(pessoa.getCodigoPessoa());
                     enderecoService.save(endereco);
                 }
             }
+    
             return ResponseEntity.ok(pessoa);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("Erro interno no servidor: " + e.getMessage(), 500));
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorResponse("Erro interno no servidor, verifique sua requisição ou tente novamente mais tarde", 500));
         }
     }
-
+    
     
     @PutMapping("/pessoa")
     public ResponseEntity<Object> editPessoa(@RequestBody Pessoa pessoa) {
@@ -239,10 +251,7 @@ public class PessoaController extends ControllerSupport {
         targetPessoa.setStatus(pessoa.getStatus());
         action.save(targetPessoa);
 
-        // Endereços existentes antes da atualização
         List<Endereco> enderecosExistentes = enderecoService.findByPessoaId(targetPessoa.getCodigoPessoa());
-
-        // Lista para armazenar os endereços que foram atualizados ou criados
         List<Endereco> listaAtualizarEnderecos = new ArrayList<>();
 
         if (pessoa.getEnderecos() != null) {
@@ -275,14 +284,13 @@ public class PessoaController extends ControllerSupport {
             }
         }
 
-        // Retorna todas as pessoas com os endereços atualizados
         Iterable<Pessoa> allPessoas = action.findAll();
-        allPessoas.forEach(p -> p.setEnderecos(Collections.emptyList()));  // Adiciona uma lista vazia de endereços
+        allPessoas.forEach(p -> p.setEnderecos(Collections.emptyList()));  // Endereços sempre retorna lista vazia
 
         return ResponseEntity.ok(allPessoas);
     }
 
-    //Endpoint de teste
+    //Endpoint de Debug
     @DeleteMapping("/pessoa/DELETE/{codigoPessoa}")
     @Transactional
     public ResponseEntity<Object> deleteHiddenPessoa(@PathVariable Long codigoPessoa) {

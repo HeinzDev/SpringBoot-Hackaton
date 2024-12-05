@@ -59,6 +59,9 @@ public class MunicipioController extends ControllerSupport {
         if(status!=null && codigoUF == null && nome == null && codigoMunicipio == null) {
             return ResponseEntity.ok(action.findByStatus(statusNumber));
         }
+        if(codigoMunicipio!=null && status==null && codigoUF == null && nome == null){
+            return ResponseEntity.ok(action.findByCodigoMunicipio(codigoMunicipioNumber).get(0));
+        }
 
         List<Municipio> results = new ArrayList<>();
         if(nome!=null)results.addAll(action.findByNome(nome));
@@ -66,12 +69,14 @@ public class MunicipioController extends ControllerSupport {
 
         results = results.stream()
                         .filter(municipio ->(nome ==null || municipio.getNome().equals(nome))&&
+                                            (codigoUF ==null || municipio.getCodigoUF().equals(codigoUFNumber)) &&
+                                            (status ==null || municipio.getStatus().equals(statusNumber)) &&
                                               (codigoMunicipioNumber == null || municipio.getCodigoMunicipio().equals(codigoMunicipioNumber)))
                         .distinct()
                         .collect(Collectors.toList());
 
         if(!results.isEmpty()) {
-            return ResponseEntity.ok(results.get(0));
+            return ResponseEntity.ok(results);
         }
         return ResponseEntity.ok(Collections.emptyList());      
     }

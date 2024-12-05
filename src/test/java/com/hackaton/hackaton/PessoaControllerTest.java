@@ -19,11 +19,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hackaton.model.Bairro;
+import com.hackaton.model.Endereco;
 import com.hackaton.model.Pessoa;
 import com.hackaton.repository.BairroService;
 import com.hackaton.repository.EnderecoService;
 import com.hackaton.repository.MunicipioService;
 import com.hackaton.repository.PessoaRepository;
+import com.hackaton.repository.PessoaService;
 import com.hackaton.repository.UFService;
 
 @SpringBootTest
@@ -38,6 +41,8 @@ public class PessoaControllerTest {
 
     @MockBean
     private PessoaRepository action;
+    
+    @MockBean PessoaService pessoaService;
     
     @MockBean
     private EnderecoService enderecoService;
@@ -55,7 +60,6 @@ public class PessoaControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Criando o Mock de Pessoa
         pessoa = new Pessoa();
         pessoa.setCodigoPessoa(1L);
         pessoa.setNome("Carlos");
@@ -108,7 +112,6 @@ public class PessoaControllerTest {
     // Testando o endpoint POST /pessoa
     @Test
     void testCreatePessoa() throws Exception {
-        // Mock para salvar pessoa
         when(action.save(any(Pessoa.class))).thenReturn(pessoa);
 
         mockMvc.perform(post("/pessoa")
@@ -123,7 +126,7 @@ public class PessoaControllerTest {
     // Testando o endpoint POST /pessoa com campos obrigatórios ausentes
     @Test
     void testCreatePessoaMissingRequiredFields() throws Exception {
-        pessoa.setNome(null);  // Remover o nome para simular erro
+        pessoa.setNome(null);  // simular erro
 
         mockMvc.perform(post("/pessoa")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -136,8 +139,7 @@ public class PessoaControllerTest {
     // Testando o endpoint PUT /pessoa com códigoPessoa não encontrado
     @Test
     public void testEditPessoa() throws Exception {
-        
-        // Criando o mock de uma pessoa
+
         Pessoa mockPessoa = new Pessoa();
         mockPessoa.setCodigoPessoa(29L);
         mockPessoa.setNome("Carlos");
@@ -149,7 +151,6 @@ public class PessoaControllerTest {
         when(action.findByCodigoPessoa(29L)).thenReturn(Collections.singletonList(mockPessoa));
         when(action.save(any(Pessoa.class))).thenReturn(mockPessoa);
         
-        // Dados de entrada para atualizar a pessoa
         String pessoaJson = "{"
             + "\"codigoPessoa\": 29,"
             + "\"nome\": \"Carlos Editado\","
@@ -170,7 +171,7 @@ public class PessoaControllerTest {
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$[0].nome", is("Carlos Editado")));
     }
-    
+
     // Testando o endpoint PUT /pessoa com campos obrigatórios ausentes
     @Test
     void testEditPessoaMissingFields() throws Exception {
@@ -181,5 +182,114 @@ public class PessoaControllerTest {
                 .content(objectMapper.writeValueAsString(pessoa)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.mensagem", is("O campo nome é obrigatório")));
+    }
+
+    // Erro inserir login que ja existe
+    @Test
+    void testTwoLogins() throws Exception {
+        // Simular pessoa já existente com mesmo login
+        when(action.findByLogin("carlos.almeida")).thenReturn(Collections.singletonList(pessoa));
+
+        mockMvc.perform(post("/pessoa")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(pessoa)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensagem", is("Já existe uma pessoa com esse login no banco de dados.")));
+    }
+
+    // Testando Retornar erro ao passar codigoEndereço na Req
+    @Test
+    void testCreatePessoaWithCodigoEndereco() throws Exception {
+        Pessoa novaPessoa = new Pessoa();
+        novaPessoa.setNome("Dante");
+        novaPessoa.setSobrenome("Sparda");
+        novaPessoa.setIdade(35L);
+        novaPessoa.setLogin("dantesparda");
+        novaPessoa.setSenha("dmc123123");
+        novaPessoa.setStatus(1L);
+
+        Endereco endereco = new Endereco();
+        endereco.setCodigoEndereco(1L);
+        endereco.setCodigoBairro(68L);
+        endereco.setNomeRua("Deruvall");
+        endereco.setNumero(13L);
+        endereco.setComplemento("office");
+        endereco.setCep("65432-987");
+
+        novaPessoa.setEnderecos(Collections.singletonList(endereco));
+
+        mockMvc.perform(post("/pessoa")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(novaPessoa)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensagem", is("Não é permitido passar o código de endereço ao criar um novo endereço.")));
+    }
+
+    // Create Pessoa
+    @Test
+    public void testCreatePessoaSuccess() throws Exception {
+        Pessoa novaPessoa = new Pessoa();
+        novaPessoa.setNome("Dante");
+        novaPessoa.setSobrenome("Sparda");
+        novaPessoa.setIdade(35L);
+        novaPessoa.setLogin("dantesparda");
+        novaPessoa.setSenha("dmc123123");
+        novaPessoa.setStatus(1L);
+    
+        Endereco endereco = new Endereco();
+        endereco.setCodigoBairro(68L);
+        endereco.setNomeRua("Deruvall");
+        endereco.setNumero(13L);
+        endereco.setComplemento("office");
+        endereco.setCep("65432-987");
+    
+        novaPessoa.setEnderecos(Collections.singletonList(endereco));
+    
+        Bairro bairroMock = new Bairro();
+        bairroMock.setNome("Bairro Teste");
+        bairroMock.setCodigoBairro(68L);
+    
+        when(bairroService.findBairroByCodigo(68L)).thenReturn(bairroMock); // Mock da lista
+    
+        when(pessoaService.save(any(Pessoa.class))).thenReturn(novaPessoa);
+        when(enderecoService.save(any(Endereco.class))).thenReturn(endereco);
+    
+        mockMvc.perform(post("/pessoa")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(novaPessoa)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome", is("Dante")))
+                .andExpect(jsonPath("$.sobrenome", is("Sparda")))
+                .andExpect(jsonPath("$.enderecos[0].nomeRua", is("Deruvall")));
+    }
+    
+    // Not Found
+    @Test
+    public void testCreatePessoaButBairroEmpty() throws Exception {
+        Pessoa novaPessoa = new Pessoa();
+        novaPessoa.setNome("Dante");
+        novaPessoa.setSobrenome("Sparda");
+        novaPessoa.setIdade(35L);
+        novaPessoa.setLogin("dantesparda");
+        novaPessoa.setSenha("dmc123123");
+        novaPessoa.setStatus(1L);
+
+        Endereco endereco = new Endereco();
+        endereco.setCodigoBairro(999L);
+        endereco.setNomeRua("Deruvall");
+        endereco.setNumero(13L);
+        endereco.setComplemento("office");
+        endereco.setCep("65432-987");
+
+        novaPessoa.setEnderecos(Collections.singletonList(endereco));
+
+        when(enderecoService.findBairroByCodigo(999L)).thenReturn(Collections.emptyList()); // < Lista vazia
+
+
+        mockMvc.perform(post("/pessoa")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(novaPessoa)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensagem", is("Bairro não encontrado para o código 999")));
     }
 }

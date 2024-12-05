@@ -49,20 +49,6 @@ public class UFControllerTest {
         uf.setStatus(1L);
     }
 
-    //Deve retornar todas as UFs(Não obrigatório)
-    // @Test
-    // void testGetAllUFs() throws Exception {
-    //     Mockito.when(ufRepository.findAll()).thenReturn(Collections.singletonList(uf));
-
-    //     mockMvc.perform(get("/uf/all"))
-    //             .andExpect(status().isOk())
-    //             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-    //             .andExpect(jsonPath("$[0].codigoUF").value(uf.getCodigoUF()))
-    //             .andExpect(jsonPath("$[0].nome").value(uf.getNome()))
-    //             .andExpect(jsonPath("$[0].sigla").value(uf.getSigla()))
-    //             .andExpect(jsonPath("$[0].status").value(uf.getStatus()));
-    // }
-
     //Deve retornar um objeto isolado pelo parâmetro "codigoUF"
     @Test
     void testGetUFByParams() throws Exception {

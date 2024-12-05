@@ -33,11 +33,6 @@ public class UFController extends ControllerSupport {
     @Autowired
     private UFRepository action;
 
-    @CrossOrigin(origins = "*")
-    @GetMapping("/uf/all")
-    public Iterable<UF> getUF() {
-        return action.findAll();
-    }
 
     @CrossOrigin(origins = "*")
     @GetMapping("/uf")
@@ -48,6 +43,10 @@ public class UFController extends ControllerSupport {
         if(codigoUF != null && !isNumeric(codigoUF)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para codigoUF não é um número válido.", 400));
         if(status != null && !isNumeric(status)) return ResponseEntity.status(400).body(createErrorResponse("O valor inserido para status não é um número válido.", 400));
         
+        if(nome==null&&status==null&codigoUF==null&&sigla==null){
+            return ResponseEntity.ok(action.findAll());
+        }
+
         Long codigoUFNumber = codigoUF != null ? Long.parseLong(codigoUF): null;
         Long statusNumber = status != null ? Long.parseLong(status): null;
 
@@ -60,7 +59,6 @@ public class UFController extends ControllerSupport {
         if (codigoUFNumber != null) results.addAll(action.findByCodigoUF(codigoUFNumber));
         if (sigla != null) results.addAll(action.findBySigla(sigla));
 
-        //
         results = results.stream()
                     .filter(uf -> (nome == null || uf.getNome().equals(nome)) &&
                                     (statusNumber == null || uf.getStatus().equals(statusNumber)) &&
@@ -84,7 +82,6 @@ public class UFController extends ControllerSupport {
         if (uf.getStatus() == 0) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Campo status é obrigatório", 400));
 
     
-        // Verificando se já existe:
         List<UF> nameExists = action.findByNome(uf.getNome());
         List<UF> siglaExists = action.findBySigla(uf.getSigla());
     
